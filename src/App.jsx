@@ -1,4 +1,4 @@
-import { useRef, useState,useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 
 import Places from "./components/Places.jsx";
 import { AVAILABLE_PLACES } from "./data.js";
@@ -7,30 +7,31 @@ import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
 import logoImg from "./assets/logo.png";
 import { sortPlacesByDistance } from "./loc.js";
 
+const storeIds = JSON.parse(localStorage.getItem("SelectedPlaces")) || [];
+const  storedPlaces= storeIds.map((id) => AVAILABLE_PLACES.find((place) => place.id === id));
 function App() {
-  const modal = useRef();
+const [isOpen, setIsOpen] = useState(false);
   const selectedPlace = useRef();
-  const [pickedPlaces, setPickedPlaces] = useState([]);
- const[AvailablePlaces,setAvailablePlaces]=useState([])
- 
-useEffect(() => {
-  navigator.geolocation.getCurrentPosition((postion) => {
-    const sortedPlaces= sortPlacesByDistance(
-       AVAILABLE_PLACES,
-       postion.coords.latitude,
-       postion.coords.longitude
-  
-     );
-     setAvailablePlaces(sortedPlaces)
-   });
-},[]);
+  const [pickedPlaces, setPickedPlaces] = useState(storedPlaces);
+  const [AvailablePlaces, setAvailablePlaces] = useState([]);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition((postion) => {
+      const sortedPlaces = sortPlacesByDistance(
+        AVAILABLE_PLACES,
+        postion.coords.latitude,
+        postion.coords.longitude
+      );
+      setAvailablePlaces(sortedPlaces);
+    });
+  }, []);
   function handleStartRemovePlace(id) {
-    modal.current.open();
+  setIsOpen(true);
     selectedPlace.current = id;
   }
 
   function handleStopRemovePlace() {
-    modal.current.close();
+    setIsOpen(false);
   }
 
   function handleSelectPlace(id) {
@@ -41,18 +42,27 @@ useEffect(() => {
       const place = AVAILABLE_PLACES.find((place) => place.id === id);
       return [place, ...prevPickedPlaces];
     });
+    const storeIds = JSON.parse(localStorage.getItem("SelectedPlaces")) || [];
+    if (storeIds.indexOf(id) === -1) {
+      localStorage.setItem("SelectedPlaces", JSON.stringify([...storeIds, id]));
+    }
   }
 
   function handleRemovePlace() {
     setPickedPlaces((prevPickedPlaces) =>
       prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
     );
-    modal.current.close();
+setIsOpen(false);
+    const storeIds = JSON.parse(localStorage.getItem("SelectedPlaces")) || [];
+    localStorage.setItem(
+      "SelectedPlaces",
+      JSON.stringify(storeIds.filter((id) => id !== selectedPlace.current))
+    );
   }
 
   return (
     <>
-      <Modal ref={modal}>
+      <Modal open={isOpen} onClose={handleStopRemovePlace}>
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
           onConfirm={handleRemovePlace}
